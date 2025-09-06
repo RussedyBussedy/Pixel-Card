@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pixel Player Card Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        /* Custom styles to apply the font */
+        body, button, input {
+            font-family: 'Press Start 2P', cursive;
+        }
+        /* Custom animation for the spinner */
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white">
+
+    <div class="min-h-screen p-4 sm:p-8">
+        <div class="max-w-7xl mx-auto">
+            <header class="text-center mb-10">
+                <h1 class="text-3xl sm:text-5xl font-bold text-yellow-400 tracking-wider">Pixel Player Card</h1>
+                <h2 class="text-lg sm:text-2xl text-indigo-400 mt-2">Generator</h2>
+            </header>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                <!-- Left Column: Controls -->
+                <div class="bg-gray-800 p-6 sm:p-8 rounded-lg border-4 border-indigo-700 shadow-2xl">
+                    <h3 class="text-2xl mb-6 text-cyan-400">Create New Player</h3>
+                    <div class="space-y-6">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">1. Upload Photo</label>
+                            <input id="file-upload" type="file" accept="image/*" class="hidden" />
+                            <label id="drop-zone" for="file-upload" class="w-full cursor-pointer bg-gray-700 rounded-md border-2 border-dashed hover:border-indigo-500 transition-all duration-300 flex flex-col items-center justify-center h-48 text-gray-400 border-gray-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+                                <p id="drop-zone-text">Select Image or Drag & Drop</p>
+                            </label>
+                            <div id="preview-container" class="mt-4 hidden">
+                                <img id="preview-image" src="" alt="Preview" class="w-48 h-48 object-cover mx-auto rounded-lg border-2 border-gray-600" />
+                            </div>
+                        </div>
+                        <input id="character-name" type="text" placeholder="2. Enter Character Name" class="w-full p-3 bg-gray-700 text-white rounded-md border-2 border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder-gray-400" />
+                        <input id="ability-1" type="text" placeholder="3. Special Ability 1" class="w-full p-3 bg-gray-700 text-white rounded-md border-2 border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder-gray-400" />
+                        <input id="ability-2" type="text" placeholder="4. Special Ability 2" class="w-full p-3 bg-gray-700 text-white rounded-md border-2 border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder-gray-400" />
+                        <input id="ability-3" type="text" placeholder="5. Special Ability 3" class="w-full p-3 bg-gray-700 text-white rounded-md border-2 border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder-gray-400" />
+                        <div class="text-center pt-4">
+                            <button id="generate-button" class="px-6 py-3 bg-indigo-600 text-white font-bold rounded-md shadow-lg hover:bg-indigo-700 disabled:bg-gray-500 disabled:cursor-not-allowed transition-all duration-200 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 border-2 border-indigo-800">
+                                Generate Card
+                            </button>
+                        </div>
+                        <p id="error-message" class="text-red-500 text-center mt-4 text-xs hidden"></p>
+                    </div>
+                </div>
+
+                <!-- Right Column: Cards -->
+                <div id="cards-container" class="bg-gray-800 p-6 sm:p-8 rounded-lg border-4 border-indigo-700 min-h-[500px]">
+                    <h3 class="text-2xl mb-6 text-cyan-400">Generated Cards</h3>
+                    <div id="loader" class="hidden flex-col items-center justify-center h-full">
+                        <div class="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-yellow-400"></div>
+                        <p id="loading-step" class="mt-4 text-lg"></p>
+                    </div>
+                    <div id="placeholder-text" class="flex items-center justify-center h-full text-center text-gray-400">
+                        <p>Your generated player cards will appear here!</p>
+                    </div>
+                    <div id="cards-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Generated cards will be injected here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- DOM Element Selection ---
+        const fileUpload = document.getElementById('file-upload');
+        const dropZone = document.getElementById('drop-zone');
+        const dropZoneText = document.getElementById('drop-zone-text');
+        const previewContainer = document.getElementById('preview-container');
+        const previewImage = document.getElementById('preview-image');
+        const characterNameInput = document.getElementById('character-name');
+        const ability1Input = document.getElementById('ability-1');
+        const ability2Input = document.getElementById('ability-2');
+        const ability3Input = document.getElementById('ability-3');
+        const generateButton = document.getElementById('generate-button');
+        const errorMessage = document.getElementById('error-message');
+        const cardsContainer = document.getElementById('cards-container');
+        const loader = document.getElementById('loader');
+        const loadingStep = document.getElementById('loading-step');
+        const placeholderText = document.getElementById('placeholder-text');
+        const cardsGrid = document.getElementById('cards-grid');
+
+        // --- State Management ---
+        let selectedImageBase64 = null;
+        let playerCounter = 1;
+
+        // --- UI Update Functions ---
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.classList.remove('hidden');
+        }
+
+        function clearError() {
+            errorMessage.classList.add('hidden');
+        }
+
+        function showLoader(step) {
+            placeholderText.classList.add('hidden');
+            loader.classList.remove('hidden');
+            loader.classList.add('flex');
+            loadingStep.textContent = step;
+            generateButton.disabled = true;
+            generateButton.textContent = 'Generating...';
+        }
+
+        function hideLoader() {
+            loader.classList.add('hidden');
+            loader.classList.remove('flex');
+            generateButton.disabled = false;
+            generateButton.textContent = 'Generate Card';
+        }
+
+        // --- File Handling ---
+        function processFile(file) {
+            if (file && file.type.startsWith('image/')) {
+                clearError();
+                
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    previewImage.src = reader.result;
+                    previewContainer.classList.remove('hidden');
+                    dropZoneText.textContent = 'Change Image';
+                    selectedImageBase64 = reader.result.split(',')[1];
+                };
+                reader.readAsDataURL(file);
+            } else {
+                showError("Invalid file. Please upload an image.");
+            }
+        }
+        
+        fileUpload.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) processFile(file);
+        });
+
+        // Drag and Drop
+        dropZone.addEventListener('dragover', (event) => {
+            event.preventDefault();
+            dropZone.classList.add('border-yellow-400', 'bg-gray-600', 'scale-105');
+        });
+        dropZone.addEventListener('dragleave', (event) => {
+            event.preventDefault();
+            dropZone.classList.remove('border-yellow-400', 'bg-gray-600', 'scale-105');
+        });
+        dropZone.addEventListener('drop', (event) => {
+            event.preventDefault();
+            dropZone.classList.remove('border-yellow-400', 'bg-gray-600', 'scale-105');
+            const file = event.dataTransfer.files[0];
+            if (file) processFile(file);
+        });
+
+        // --- Card Rendering ---
+        function createPlayerCardHTML(card) {
+            return `
+                <div class="bg-gray-800 p-4 rounded-lg border-4 border-indigo-500 shadow-2xl transition-transform duration-300 hover:scale-105 flex flex-col">
+                    <h3 class="text-xl text-yellow-400 mb-2">${`P${card.playerNumber}: ${card.name}`}</h3>
+                    <img src="${card.imageUrl}" alt="Player card for ${card.name}" class="w-full rounded-md mb-4 border-2 border-gray-600" />
+                    <div class="space-y-2 flex-grow">
+                        ${card.abilities.map((ability, index) => `
+                            <p class="text-sm text-gray-300"><span class="text-cyan-400 font-bold">ABIL ${index + 1}:</span> ${ability}</p>
+                        `).join('')}
+                    </div>
+                    <div class="mt-4 text-center">
+                        <button data-url="${card.imageUrl}" data-name="${card.name}" data-pnum="${card.playerNumber}" class="download-btn w-full text-sm py-2 px-6 bg-indigo-600 text-white font-bold rounded-md shadow-lg hover:bg-indigo-700 transition-all duration-200 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 border-2 border-indigo-800">Download</button>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Event delegation for download buttons
+        cardsGrid.addEventListener('click', function(event) {
+            if (event.target.classList.contains('download-btn')) {
+                event.preventDefault();
+                const cardUrl = event.target.dataset.url;
+                const cardName = event.target.dataset.name;
+                const cardPNum = event.target.dataset.pnum;
+
+                const link = document.createElement('a');
+                link.href = cardUrl;
+                link.download = `player-${cardPNum}-${cardName.toLowerCase().replace(/\s+/g, '-')}.jpeg`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        });
+
+        // --- API Call Logic ---
+        async function buildFinalCard(generatedSprite, cardDetails) {
+            showLoader('Building Card...');
+
+            const cardPrompt = `
+                **ROLE: You are an 8-bit sprite artist for a classic 1980s console game. Your reputation is on the line.**
+                **TASK: You have been given a pre-made character sprite. Your job is to build a player card around it.**
+                **STYLE GUIDE (MANDATORY):**
+                1.  **Place Character:** Place the provided character sprite in the center of the image.
+                2.  **Card Border:** Create an ornate, decorative border around the character using a palette of gold, deep purple, and royal blue pixels in a complex, repeating pattern.
+                3.  **Background:** Behind the character sprite, create a simple pixel art landscape: light blue sky with fluffy white clouds, and rolling green hills.
+                4.  **UI Panels & Typography:** Below the character, create a dark purple rectangular area for stats. All text must use a chunky, 8-bit style pixel font.
+                **CARD CONTENT (Integrate into the design):**
+                - Player Number: "Player No.: ${cardDetails.playerNumber}"
+                - Level: "Level: 7"
+                - Character Name: "${cardDetails.name}"
+                - XP Bar: A horizontal bar, mostly filled green (950/1000 XP). Label it "XP" and "LEVEL UP!".
+                - Special Abilities: A list titled "SPECIAL ABILITIES": 1. ${cardDetails.abilities[0]}, 2. ${cardDetails.abilities[1]}, 3. ${cardDetails.abilities[2]}.
+            `;
+            const payload = {
+                contents: [{ parts: [{ text: cardPrompt }, { inlineData: { mimeType: "image/png", data: generatedSprite } }] }],
+                generationConfig: { responseModalities: ['IMAGE'] },
+            };
+
+            try {
+                const apiKey = "";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=${apiKey}`;
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!response.ok) throw new Error(`API Error (Card): ${response.status}`);
+                const result = await response.json();
+                const base64Data = result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
+
+                if (base64Data) {
+                    const newCard = {
+                        ...cardDetails,
+                        imageUrl: `data:image/png;base64,${base64Data}`,
+                    };
+                    placeholderText.classList.add('hidden');
+                    cardsGrid.insertAdjacentHTML('afterbegin', createPlayerCardHTML(newCard));
+                    playerCounter++;
+                    // Reset form
+                    characterNameInput.value = ''; ability1Input.value = ''; ability2Input.value = ''; ability3Input.value = '';
+                    selectedImageBase64 = null;
+                    previewContainer.classList.add('hidden');
+                    dropZoneText.textContent = 'Select Image or Drag & Drop';
+
+                } else {
+                    throw new Error(result?.candidates?.[0]?.finishReason || "No card data received.");
+                }
+            } catch (err) {
+                console.error(err);
+                showError(err.message || "Failed to build the final card.");
+            } finally {
+                hideLoader();
+            }
+        }
+
+        async function startGenerationProcess() {
+            const characterName = characterNameInput.value;
+            const ability1 = ability1Input.value;
+            const ability2 = ability2Input.value;
+            const ability3 = ability3Input.value;
+
+            if (!selectedImageBase64 || !characterName || !ability1 || !ability2 || !ability3) {
+                showError("Please fill in all fields and upload an image.");
+                return;
+            }
+            clearError();
+            showLoader('Generating Character...');
+
+            const spritePrompt = `
+                **ROLE: You are an 8-bit sprite artist for a classic 1980s console game. Your reputation is on the line.**
+                **TASK: Create a brand new piece of art. The photograph is your only reference for the subject's appearance.**
+                **ABSOLUTE RULES - FAILURE TO COMPLY IS NOT AN OPTION:**
+                1.  **NO FILTERS:** Under no circumstances are you to use the original photo's pixels. Any form of filtering, tracing, rotoscoping, or pixelating the source image is strictly forbidden.
+                2.  **REDRAW FROM SCRATCH:** You must create a new drawing, pixel by pixel.
+                3.  **8-BIT AESTHETIC:** The style must be authentic 8-bit. This means a limited color palette, hard-edged pixels, no anti-aliasing, and simple, blocky shading.
+                4.  **REFERENCE, NOT A BASE:** Use the photo to understand the person's hair, clothes, and pose, then discard it and draw your own interpretation in the 8-bit style.
+                5.  **OUTPUT FORMAT:** The final image must be ONLY the character sprite on a transparent background. No background, no borders, no text, nothing else. Just the character.
+            `;
+            const payload = {
+                contents: [{ parts: [{ text: spritePrompt }, { inlineData: { mimeType: "image/jpeg", data: selectedImageBase64 } }] }],
+                generationConfig: { responseModalities: ['IMAGE'] },
+            };
+
+            try {
+                const apiKey = "";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=${apiKey}`;
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!response.ok) throw new Error(`API Error (Sprite): ${response.status}`);
+                const result = await response.json();
+                const base64Data = result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
+
+                if (base64Data) {
+                    const cardDetails = {
+                        name: characterName,
+                        abilities: [ability1, ability2, ability3],
+                        playerNumber: playerCounter,
+                    };
+                    await buildFinalCard(base64Data, cardDetails);
+                } else {
+                    throw new Error(result?.candidates?.[0]?.finishReason || "No sprite data received.");
+                }
+            } catch (err) {
+                console.error(err);
+                showError(err.message || "Failed to generate the character sprite.");
+                hideLoader();
+            }
+        }
+        
+        generateButton.addEventListener('click', startGenerationProcess);
+    </script>
+
+</body>
+</html>
